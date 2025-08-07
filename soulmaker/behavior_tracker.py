@@ -115,10 +115,21 @@ class BehaviorTracker:
         # provider.text_chat 返回带有 .completion_text 的响应对象
         raw = resp.completion_text if hasattr(resp, "completion_text") else str(resp)
         data = json.loads(raw)
+        
+        # 确保 next_action 是字典类型
         next_action = data.get("next_action", {})
-        behavior = (
-            BehaviorRecord(**next_action["behavior"]) if next_action.get("type") == "final_decision" and next_action.get("behavior") else None
-        )
+        if not isinstance(next_action, dict):
+            next_action = {}
+            
+        behavior = None
+        if (next_action.get("type") == "final_decision" and 
+            next_action.get("behavior") and 
+            isinstance(next_action["behavior"], dict)):
+            try:
+                behavior = BehaviorRecord(**next_action["behavior"])
+            except Exception:
+                behavior = None
+                
         action = NextAction(
             type=next_action.get("type", "idle"),
             content=next_action.get("content"),
