@@ -9,6 +9,10 @@ AstrBot 插件：模拟虚拟角色 **八奈见杏菜** 的行为轨迹。
 
 - `/track <json>` 运行一次推演循环。指令参数为行为状态 JSON，格式
   参考 `soulmaker.behavior_tracker.BehaviorState`。
+- `/bili_rank [rid]` 查看 B 站排行榜（可选分区 `rid`）。
+- `/bili_random` 随机推荐一个热门视频。
+- `/bili_search <关键词>` 搜索指定视频。
+- `/bili_partition <rid>` 查看指定分区的最新视频。
 
 ## 依赖
 
