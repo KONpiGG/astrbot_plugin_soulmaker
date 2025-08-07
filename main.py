@@ -1,4 +1,4 @@
-"""AstrBot plugin for generating behaviour traces of 八奈见杏菜."""
+"""AstrBot 插件：生成八奈见杏菜的行为轨迹。"""
 
 from __future__ import annotations
 
@@ -22,9 +22,9 @@ from soulmaker.bilibili_api import (
 )
 
 
-@register("soulmaker", "YourName", "行为轨迹生成插件", "0.1.0")
+@register("astrbot_plugin_soulmaker", "KONpiGG", "blog", "1.0.0")
 class SoulmakerPlugin(Star):
-    """Entry point for the behaviour tracking plugin."""
+    """行为跟踪插件的入口点。"""
 
     def __init__(self, context: Context):
         super().__init__(context)
@@ -32,7 +32,7 @@ class SoulmakerPlugin(Star):
 
     @filter.command("track")
     async def track(self, event: AstrMessageEvent, state_json: str):
-        """Run one reasoning cycle with provided JSON state."""
+        """使用提供的JSON状态运行一次推理循环。"""
 
         payload = json.loads(state_json)
         history: List[HistoryEntry] = [HistoryEntry(**h) for h in payload.get("history", [])]

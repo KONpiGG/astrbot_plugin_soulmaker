@@ -1,18 +1,16 @@
-"""Behavior tracking module for soulmaker plugin.
+"""soulmaker 插件的行为跟踪模块。
 
-This module implements a Thought-Query-Decision loop to simulate the
-behaviour of the virtual character "八奈见杏菜".
+此模块实现了思考-查询-决策循环来模拟虚拟角色"八奈见杏菜"的行为。
 
-The workflow roughly follows:
-1. Generate a thought based on current state and memory.
-2. Parse the next action from model output.
-3. Optionally call external APIs to gather information.
-4. Accumulate new context for the next round.
-5. Save final behaviour records for logging modules.
+工作流程大致如下：
+1. 基于当前状态和记忆生成思考。
+2. 从模型输出中解析下一个行动。
+3. 可选地调用外部API来收集信息。
+4. 为下一轮累积新的上下文。
+5. 保存最终的行为记录供日志模块使用。
 
-The class is written to be framework agnostic so it can be easily unit
-tested.  Network requests use ``httpx`` which is the recommended async
-HTTP client in AstrBot plugins.
+该类被编写为框架无关的，因此可以轻松进行单元测试。
+网络请求使用 ``httpx``，这是AstrBot插件中推荐的异步HTTP客户端。
 """
 
 from __future__ import annotations
@@ -28,7 +26,7 @@ from astrbot.api.star import Context
 
 @dataclass
 class HistoryEntry:
-    """Represents a past behaviour entry."""
+    """表示过去的行为条目。"""
 
     start: str
     end: str
@@ -37,7 +35,7 @@ class HistoryEntry:
 
 @dataclass
 class Memory:
-    """Mutable memory between cycles."""
+    """循环之间的可变记忆。"""
 
     last_query: str = ""
     last_api_results: Dict[str, Any] = field(default_factory=dict)
@@ -45,7 +43,7 @@ class Memory:
 
 @dataclass
 class BehaviorState:
-    """Input state for the behaviour tracker."""
+    """行为跟踪器的输入状态。"""
 
     current_time: str
     history: List[HistoryEntry] = field(default_factory=list)
@@ -54,7 +52,7 @@ class BehaviorState:
 
 @dataclass
 class BehaviorRecord:
-    """Final behaviour decision."""
+    """最终行为决策。"""
 
     start: str
     end: str
@@ -66,7 +64,7 @@ class BehaviorRecord:
 
 @dataclass
 class NextAction:
-    """Next action proposed by the model."""
+    """模型提出的下一个行动。"""
 
     type: Literal["query", "final_decision", "idle"]
     content: Optional[str] = None
@@ -75,14 +73,14 @@ class NextAction:
 
 @dataclass
 class ThoughtOutput:
-    """Output of a single reasoning cycle."""
+    """单次推理循环的输出。"""
 
     thought: str
     next_action: NextAction
 
 
 class BehaviorTracker:
-    """Implements the Thought-Query-Decision loop."""
+    """实现思考-查询-决策循环。"""
 
     def __init__(self, context: Context, data_dir: Optional[Path] = None) -> None:
         self.context = context
@@ -92,16 +90,15 @@ class BehaviorTracker:
 
     # ------------------------------------------------------------------
     async def generate_thought(self, state: BehaviorState) -> ThoughtOutput:
-        """Use the LLM to generate a thought and next action.
+        """使用LLM生成思考和下一个行动。
 
-        The prompt injects character traits, history and memory into the
-        model.  The model is expected to return a JSON string that matches
-        :class:`ThoughtOutput`.
+        提示词将角色特征、历史和记忆注入到模型中。
+        模型预期返回一个匹配 :class:`ThoughtOutput` 的JSON字符串。
         """
 
         provider = self.context.get_using_provider()
         if provider is None:
-            raise RuntimeError("No LLM provider configured")
+            raise RuntimeError("未配置LLM提供者")
 
         history_text = "\n".join(
             f"{h.start}-{h.end}: {h.activity}" for h in state.history
@@ -115,7 +112,7 @@ class BehaviorTracker:
         )
 
         resp = await provider.text_chat(prompt=prompt, contexts=[], image_urls=[], func_tool=None)
-        # provider.text_chat returns response object with .completion_text
+        # provider.text_chat 返回带有 .completion_text 的响应对象
         raw = resp.completion_text if hasattr(resp, "completion_text") else str(resp)
         data = json.loads(raw)
         next_action = data.get("next_action", {})
@@ -131,7 +128,7 @@ class BehaviorTracker:
 
     # ------------------------------------------------------------------
     async def parse_next_action(self, output: ThoughtOutput, state: BehaviorState) -> BehaviorState:
-        """Update memory or history based on the next action."""
+        """基于下一个行动更新记忆或历史。"""
 
         action = output.next_action
         if action.type == "query" and action.content:
@@ -149,12 +146,12 @@ class BehaviorTracker:
 
     # ------------------------------------------------------------------
     async def call_external_api(self, content: str) -> Dict[str, Any]:
-        """Call a simple external API based on content keywords."""
+        """基于内容关键词调用简单的外部API。"""
 
         result: Dict[str, Any] = {}
         try:
             if "天气" in content:
-                # wttr.in provides free text weather
+                # wttr.in 提供免费文本天气
                 url = f"https://wttr.in/{content.replace('天气', '').strip()}?format=j1"
                 async with httpx.AsyncClient() as client:
                     resp = await client.get(url, timeout=10)
@@ -167,20 +164,20 @@ class BehaviorTracker:
                     result["bilibili"] = resp.json()
             else:
                 result["info"] = "no_api"
-        except Exception as exc:  # pragma: no cover - network failure
+        except Exception as exc:  # pragma: no cover - 网络故障
             result["error"] = str(exc)
         return result
 
     # ------------------------------------------------------------------
     def accumulate_context(self, state: BehaviorState, output: ThoughtOutput) -> None:
-        """Persist intermediate state for subsequent cycles."""
+        """为后续循环持久化中间状态。"""
 
         state.memory.last_api_results = getattr(state.memory, "last_api_results", {})
-        # This method can be expanded for richer context management.
+        # 此方法可以扩展为更丰富的上下文管理。
 
     # ------------------------------------------------------------------
     async def save_behavior(self, behavior: BehaviorRecord) -> None:
-        """Append the behaviour record to a JSON log file."""
+        """将行为记录追加到JSON日志文件。"""
 
         records: List[Dict[str, Any]] = []
         if self.log_path.exists():
@@ -195,7 +192,7 @@ class BehaviorTracker:
 
     # ------------------------------------------------------------------
     async def run_cycle(self, state: BehaviorState) -> BehaviorState:
-        """Execute a full reasoning cycle."""
+        """执行完整的推理循环。"""
 
         output = await self.generate_thought(state)
         new_state = await self.parse_next_action(output, state)
